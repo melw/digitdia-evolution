@@ -1,0 +1,22 @@
+# Reflecta's firmware is NOT distributed with this repo - see base/README.md
+base/*.rbn
+base/*.bin
+base/*.BIN
+*.dump
+# build outputs (out/ holds full firmware images made from your base)
+out/
+src/dbg/*.o
+src/dbg/*.elf
+src/dbg/*.bin
+src/nrs/*.o
+src/nrs/*.elf
+src/nrs/*.bin
+pldr/*.o
+pldr/*.elf
+pldr/*.text
+*.rbn
+*.bcl
+*.BIN
+*.exe
+__pycache__/
+.idea/

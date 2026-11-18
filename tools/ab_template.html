@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scan A/B comparison</title>
+<style>
+  :root { --bg: #f4f4f2; --fg: #1d1d1b; --muted: #6b6b66; --card: #ffffff; --line: #dcdcd6; --a: #b4561f; --b: #1f6fb4; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: #161616; --fg: #e9e9e4; --muted: #9a9a94; --card: #202020; --line: #333; --a: #e08a52; --b: #6aaee8; }
+  }
+  :root[data-theme="dark"] { --bg: #161616; --fg: #e9e9e4; --muted: #9a9a94; --card: #202020; --line: #333; --a: #e08a52; --b: #6aaee8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 10px 16px; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .help { color: var(--muted); font-size: 13px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+  button { font: inherit; padding: 5px 12px; border: 1px solid var(--line); background: var(--card); color: var(--fg); border-radius: 6px; cursor: pointer; }
+  button.on { border-color: var(--fg); font-weight: 600; }
+  .tag { font-weight: 700; padding: 2px 8px; border-radius: 4px; color: #fff; }
+  .tag.a { background: var(--a); } .tag.b { background: var(--b); }
+  main { max-width: 1240px; margin: 0 auto; padding: 16px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 18px; padding: 12px; }
+  section h2 { font-size: 16px; margin: 0 0 8px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+  section h2 small { color: var(--muted); font-weight: 400; }
+  .full img { width: 100%; height: auto; display: block; cursor: pointer; border-radius: 4px; }
+  .crops { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .crop { flex: 1 1 300px; min-width: 0; }
+  .crop .lbl { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+  .crop .box { overflow: hidden; border-radius: 4px; cursor: pointer; position: relative; }
+  .crop img { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+  .zoom2 .crop .box { aspect-ratio: 1 / 1; }
+  .zoom2 .crop img { width: 200%; max-width: none; margin: -50% 0 0 -50%; }
+  .badge { position: absolute; left: 6px; top: 6px; }
+  .side .crop { flex-basis: 45%; }
+</style>
+</head>
+<body>
+<header>
+  <h1>__LA__ vs __LB__ - same slides</h1>
+  <div class="help">Click any picture (or press Space) to flip between <span class="tag a">__LA__</span> and <span class="tag b">__LB__</span>.
+    Crops are 1:1 (100 %), lossless copies of the JPEG pixels. Brightness differences come from the scanner's auto-exposure, not the firmware.</div>
+  <div class="bar">
+    <span>Showing:</span>
+    <button id="ba" class="on">__LA__</button><button id="bb">__LB__</button>
+    <span style="width:12px"></span>
+    <span>Crops:</span><button id="z1" class="on">100 %</button><button id="z2">200 % (centre)</button>
+    <span style="width:12px"></span>
+    <span>Layout:</span><button id="lf" class="on">flip</button><button id="ls">side by side</button>
+  </div>
+</header>
+<main id="m"></main>
+<script>
+const S = __DATA__;
+let cur = 'a', side = false;
+const m = document.getElementById('m');
+function render() {
+  m.innerHTML = '';
+  for (const s of S) {
+    const sec = document.createElement('section');
+    sec.innerHTML = `<h2>Slide ${s.n} <small>__LA__: ${s.fa}, ${s.mba} MB &nbsp;·&nbsp; __LB__: ${s.fb}, ${s.mbb} MB</small></h2>`;
+    const full = document.createElement('div'); full.className = 'full';
+    full.style.position = 'relative';
+    full.innerHTML = `<span class="tag badge flipbadge"></span><img data-k="s${String(s.n).padStart(2,'0')}_full" loading="lazy" alt="Slide ${s.n} whole frame">`;
+    sec.appendChild(full);
+    const cr = document.createElement('div'); cr.className = 'crops' + (side ? ' side' : '');
+    const names = ['centre', 'most detailed area'];
+    for (let i = 0; i < 2; i++) {
+      const k = `s${String(s.n).padStart(2,'0')}_c${i}`;
+      if (side) {
+        for (const t of ['a', 'b']) cr.insertAdjacentHTML('beforeend',
+          `<div class="crop"><div class="lbl">${names[i]} - ${t === 'a' ? '__LA__' : '__LB__'}</div><div class="box"><span class="tag ${t} badge">${t === 'a' ? '__LA__' : '__LB__'}</span><img src="img/${k}_${t}.png" loading="lazy" alt=""></div></div>`);
+      } else {
+        cr.insertAdjacentHTML('beforeend',
+          `<div class="crop"><div class="lbl">${names[i]}, 1:1</div><div class="box"><span class="tag badge flipbadge"></span><img data-k="${k}" data-png="1" loading="lazy" alt=""></div></div>`);
+      }
+    }
+    sec.appendChild(cr);
+    m.appendChild(sec);
+  }
+  apply();
+}
+function apply() {
+  document.querySelectorAll('img[data-k]').forEach(im => {
+    im.src = `img/${im.dataset.k}_${cur}.${im.dataset.png ? 'png' : 'jpg'}`;
+  });
+  document.querySelectorAll('.flipbadge').forEach(b => {   /* fixed: the old selector skipped badges after the first flip */
+    b.className = 'tag badge flipbadge ' + cur; b.textContent = cur === 'a' ? '__LA__' : '__LB__';
+  });
+  document.getElementById('ba').classList.toggle('on', cur === 'a');
+  document.getElementById('bb').classList.toggle('on', cur === 'b');
+}
+function flip() { cur = cur === 'a' ? 'b' : 'a'; apply(); }
+m.addEventListener('click', e => { if (e.target.tagName === 'IMG' && !side) flip(); });
+document.addEventListener('keydown', e => { if (e.code === 'Space') { e.preventDefault(); flip(); } });
+document.getElementById('ba').onclick = () => { cur = 'a'; apply(); };
+document.getElementById('bb').onclick = () => { cur = 'b'; apply(); };
+document.getElementById('z1').onclick = () => { m.classList.remove('zoom2'); z1.classList.add('on'); z2.classList.remove('on'); };
+document.getElementById('z2').onclick = () => { m.classList.add('zoom2'); z2.classList.add('on'); z1.classList.remove('on'); };
+document.getElementById('lf').onclick = () => { side = false; lf.classList.add('on'); ls.classList.remove('on'); render(); };
+document.getElementById('ls').onclick = () => { side = true; ls.classList.add('on'); lf.classList.remove('on'); render(); };
+render();
+</script>
+</body>
+</html>
